@@ -1,0 +1,124 @@
+import pandas as pd
+import sklearn as sl
+import numpy as np
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from statsmodels.tools.eval_measures import rmse
+from arch import arch_model
+
+# Install and import required libraries
+import yfinance as yf
+
+# Download stock data
+data = yf.download("SN.L", start="2015-01-01", end="2022-12-31")
+
+# Extract close price
+CLOSEPRICE = data["Close"].dropna()
+
+# Summary statistics
+print(CLOSEPRICE.describe())
+
+# Plot close price
+plt.figure(figsize=(10, 6))
+plt.plot(CLOSEPRICE)
+plt.title("Stock Close Price, 2015-2022")
+plt.xlabel("Days")
+plt.ylabel("Price")
+plt.show()
+
+# Train-test split
+train = CLOSEPRICE[:1518]
+test = CLOSEPRICE[1518:]
+
+# Plot train and test data
+plt.figure(figsize=(10, 6))
+plt.plot(CLOSEPRICE, label="Close Price")
+plt.plot(train, label="Training Data", color="blue")
+plt.plot(test, label="Testing Data", color="green")
+plt.legend(loc="lower right")
+plt.title("Stock Close Price, 2015-2022")
+plt.xlabel("Days")
+plt.ylabel("Price")
+plt.show()
+
+# Augmented Dickey-Fuller test
+adf_result = adfuller(train)
+print("ADF Statistic:", adf_result[0])
+print("p-value:", adf_result[1])
+
+# Autocorrelation and Partial Autocorrelation plots
+fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+plot_acf(train, ax=ax[0])
+plot_pacf(train, ax=ax[1])
+plt.show()
+
+# Differencing
+diff_train = train.diff().dropna()
+
+# Augmented Dickey-Fuller test after differencing
+adf_result_diff = adfuller(diff_train)
+print("ADF Statistic (After Differencing):", adf_result_diff[0])
+print("p-value (After Differencing):", adf_result_diff[1])
+
+# Autocorrelation and Partial Autocorrelation plots after differencing
+fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+plot_acf(diff_train, ax=ax[0])
+plot_pacf(diff_train, ax=ax[1])
+plt.show()
+
+# ARIMA model
+model = ARIMA(train, order=(2, 1, 2))
+model_fit = model.fit()
+print(model_fit.summary())
+
+# Residual analysis
+residuals = model_fit.resid
+fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+plot_acf(residuals, ax=ax[0])
+plot_pacf(residuals, ax=ax[1])
+plt.show()
+
+# Forecasting
+forecast = model_fit.forecast(steps=503)
+forecast_values = forecast[0]
+
+# Plot forecast
+plt.figure(figsize=(10, 6))
+plt.plot(forecast_values, label="Forecasted Values")
+plt.title("Forecasted Stock Close Price")
+plt.xlabel("Days")
+plt.ylabel("Price")
+plt.legend()
+plt.show()
+
+# Accuracy evaluation
+rmse_value = rmse(test, forecast_values)
+print("RMSE:", rmse_value)
+
+# GARCH model
+model_garch = arch_model(returnss, vol='Garch', p=1, q=1)
+model_garch_fit = model_garch.fit()
+print(model_garch_fit.summary())
+
+# Forecasting using GARCH model
+forecast_garch = model_garch_fit.forecast(start=len(returnss), horizon=503)
+forecast_values_garch = forecast_garch.variance.values[-1, :]
+
+# Plot forecast using GARCH model
+plt.figure(figsize=(10, 6))
+plt.plot(forecast_values_garch, label="Forecasted Values (GARCH)")
+plt.title("Forecasted Stock Close Price (GARCH)")
+plt.xlabel("Days")
+plt.ylabel("Price")
+plt.legend()
+plt.show()
+
+# Accuracy evaluation using GARCH model
+rmse_value_garch = rmse(test, forecast_values_garch)
+print("RMSE (GARCH):", rmse_value_garch)
